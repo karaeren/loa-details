@@ -69,5 +69,12 @@ function updateModelValue(sender, isSuffix, value) {
     ? `${value.value}+${oldVal.split("+")[1]}`
     : `${oldVal.split("+")[0]}+${value.value}`;
   settingsStore.settings.shortcuts[sender].value = newVal;
+
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: `settings.shortcuts.${sender}.value`,
+    value: newVal,
+    source: "main",
+  });
 }
 </script>

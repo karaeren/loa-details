@@ -4,14 +4,59 @@
 
     <q-item tag="label">
       <q-item-section side top>
-        <q-checkbox v-model="settingsStore.settings.uploads.openOnUpload" />
+        <q-checkbox
+          v-model="settingsStore.settings.uploads.openOnUpload"
+          @update:model-value="changeOpenOnUpload"
+        />
       </q-item-section>
 
       <q-item-section>
         <q-item-label>Open On Upload</q-item-label>
         <q-item-label caption>
-          Enable to automatically open the uploaded session in your default
-          browser.
+          Automatically open the uploaded encounter in your default browser.
+        </q-item-label>
+      </q-item-section>
+    </q-item>
+
+    <q-item tag="label">
+      <q-item-section side top>
+        <q-checkbox
+          v-model="settingsStore.settings.uploads.uploadUnlisted"
+          @update:model-value="changeUploadUnlisted"
+        />
+      </q-item-section>
+
+      <q-item-section>
+        <q-item-label>Private Uploads</q-item-label>
+        <q-item-label caption>
+          Upload your encounters as unlisted. Unlisted encounters can only be
+          viewed with a link.
+        </q-item-label>
+      </q-item-section>
+    </q-item>
+
+    <q-item tag="label">
+      <q-item-section side top>
+        <q-checkbox
+          v-model="settingsStore.settings.uploads.includeRegion"
+          @update:model-value="changeIncludeRegion"
+        />
+      </q-item-section>
+
+      <q-item-section>
+        <q-item-label
+          >Include Game Region
+          <q-badge color="blue">
+            {{
+              settingsStore.settings.general.server.replace(/./, (c) =>
+                c.toUpperCase()
+              )
+            }}
+          </q-badge>
+        </q-item-label>
+        <q-item-label caption>
+          Include your game region in the upload. This value is taken
+          automatically based on your current logger configuration.
         </q-item-label>
       </q-item-section>
     </q-item>
@@ -30,13 +75,14 @@
             settingsStore.settings.uploads.uploadKey.length > 32
           "
           v-model="settingsStore.settings.uploads.uploadLogs"
+          @update:model-value="changeUploadLogs"
         />
       </q-item-section>
 
       <q-item-section>
-        <q-item-label>Upload Logged DPS</q-item-label>
+        <q-item-label>Upload Logged Encounters</q-item-label>
         <q-item-label caption>
-          Enable to upload your sessions to the web. Requires the "Upload Key"
+          Enable to upload your encounters to the web. Requires the "Upload Key"
           to be set.
         </q-item-label>
       </q-item-section>
@@ -46,13 +92,13 @@
       <q-item-section left>
         <q-item-label>Upload Key</q-item-label>
         <q-item-label caption>
-          An API key is required to upload logged sessions.<br />
+          An API key is required to upload logged encounters.<br />
           Login at
           <span
-            @click="openSite(settingsStore.settings.uploads.loginUrl)"
+            @click="openSite(settingsStore.settings.uploads.site)"
             class="text-primary"
             style="cursor: pointer"
-            >{{ settingsStore.settings.uploads.loginUrl }}</span
+            >{{ settingsStore.settings.uploads.site }}</span
           >
           to get one.
         </q-item-label>
@@ -62,6 +108,8 @@
           v-model="uploadKey"
           :type="isPwd ? 'password' : 'text'"
           label="API Key"
+          clearable
+          @clear="uploadKey = ''"
         >
           <template v-slot:append>
             <q-icon
@@ -74,414 +122,186 @@
       </q-item-section>
     </q-item>
 
-    <q-item-label header>Server Selection</q-item-label>
+    <q-separator spaced />
 
     <q-item tag="label">
-      <q-item-section side>
-        <q-item-label>Region</q-item-label>
-      </q-item-section>
-      <q-item-section>
-        <q-select
-          filled
-          :hide-bottom-space="true"
-          :clearable="true"
-          v-model="selectedRegion"
-          :options="regions"
-          :dense="true"
-          :square="true"
-        >
-        </q-select>
+      <q-item-section side top>
+        <q-btn
+          unelevated
+          color="negative"
+          :label="`${showAdvanced ? 'Hide' : 'Show'} Advanced`"
+          @click="showAdvanced = !showAdvanced"
+        />
       </q-item-section>
 
-      <q-item-section side>
-        <q-item-label>Server&nbsp;&nbsp;</q-item-label>
-      </q-item-section>
       <q-item-section>
-        <q-select
-          filled
-          :hide-bottom-space="true"
-          :clearable="true"
-          v-model="selectedServer"
-          :options="servers[settingsStore.settings.uploads.region]"
-          :dense="true"
-          :square="true"
-        >
-        </q-select>
+        <q-item-label>For users self-hosting logs</q-item-label>
+        <q-item-label caption>
+          Modifying any of the settings here may break uploads - careful!
+        </q-item-label>
       </q-item-section>
     </q-item>
 
-    <q-item-label header
-      >Recent Uploads
-      <small>The last 10 sessions uploaded to the web.</small></q-item-label
-    >
+    <div v-if="showAdvanced" style="margin-top: 25px !important">
+      <q-item tag="label" :clickable="false">
+        <q-item-section left>
+          <q-item-label>Upload Server&nbsp; </q-item-label>
+          <q-item-label caption> URL to API server. </q-item-label>
+        </q-item-section>
+        <q-item-section right>
+          <q-input
+            v-model="settingsStore.settings.uploads.api"
+            type="text"
+            label="Upload Server"
+            @update:model-value="changeUploadUrl"
+            clearable
+            clear-icon="refresh"
+            @clear="resetURL('api')"
+          >
+          </q-input>
+        </q-item-section>
+      </q-item>
 
-    <q-item>
-      <q-item-section v-if="recentSessions.length === 0">
-        <q-item>
-          <span>No Recent Sessions</span>
-        </q-item>
-      </q-item-section>
-      <q-item-section v-else>
-        <q-item
-          v-for="session in recentSessions.sort(
-            (a, b) => b.createdAt - a.createdAt
-          )"
-          :key="session.id"
-          :session="session"
-        >
-          <q-item-section>
-            <q-btn
-              color="primary"
-              @click="
-                openSite(
-                  `${settingsStore.settings.uploads.loginUrl}/logs/${session.id}`
-                )
-              "
-            >
-              {{ session.id || "Invalid ID" }}
-            </q-btn>
-          </q-item-section>
-          <q-item-section>
-            <span>
-              &nbsp; Uploaded:
-              {{
-                new Intl.DateTimeFormat("en-US", {
-                  dateStyle: "medium",
-                  timeStyle: "medium",
-                }).format(new Date(session.createdAt))
-              }}</span
-            >
-          </q-item-section>
-        </q-item>
-      </q-item-section>
-    </q-item>
+      <q-item tag="label" :clickable="false">
+        <q-item-section left>
+          <q-item-label>Upload Endpoint&nbsp; </q-item-label>
+          <q-item-label caption>
+            Endpoint for log uploads on API.
+          </q-item-label>
+        </q-item-section>
+        <q-item-section right>
+          <q-input
+            v-model="settingsStore.settings.uploads.uploadEndpoint"
+            type="text"
+            label="Endpoint"
+            @update:model-value="changeUploadEndpoint"
+            clearable
+            clear-icon="refresh"
+            @clear="resetURL('uploadEndpoint')"
+          >
+          </q-input>
+        </q-item-section>
+      </q-item>
+
+      <q-item tag="label" :clickable="false">
+        <q-item-section left>
+          <q-item-label>Frontend&nbsp; </q-item-label>
+          <q-item-label caption> URL to frontend. </q-item-label>
+        </q-item-section>
+        <q-item-section right>
+          <q-input
+            v-model="settingsStore.settings.uploads.site"
+            type="text"
+            label="Frontend"
+            @update:model-value="changeFrontendUrl"
+            clearable
+            clear-icon="refresh"
+            @clear="resetURL('site')"
+          >
+          </q-input>
+        </q-item-section>
+      </q-item>
+    </div>
   </q-list>
 </template>
 
 <script setup>
-import { onMounted, ref, watch } from "vue";
+import { ref, watch } from "vue";
 import { useSettingsStore } from "src/stores/settings";
 const settingsStore = useSettingsStore();
 
-const selectedRegion = ref("");
-const selectedServer = ref("");
-const recentSessions = ref([]);
-
-// TODO: move this to constants once (if) the uploader becomes available
-const regions = [
-  {
-    label: "NA West",
-    value: "na_west",
-  },
-  {
-    label: "NA East",
-    value: "na_east",
-  },
-  {
-    label: "EU Central",
-    value: "eu_central",
-  },
-  {
-    label: "EU West",
-    value: "eu_west",
-  },
-  {
-    label: "South America",
-    value: "sa",
-  },
-  {
-    label: "Korea",
-    value: "kr",
-  },
-  {
-    label: "Russia",
-    value: "ru",
-  },
-];
-
-const servers = {
-  na_west: [
-    {
-      label: "Mari",
-      value: "mari",
-    },
-    {
-      label: "Akkan",
-      value: "akkan",
-    },
-    {
-      label: "Rohendel",
-      value: "rohendel",
-    },
-    {
-      label: "Valtan",
-      value: "valtan",
-    },
-    {
-      label: "Bergstrom",
-      value: "bergstrom",
-    },
-    {
-      label: "Enviska",
-      value: "enviska",
-    },
-    {
-      label: "Shandi",
-      value: "shandi",
-    },
-  ],
-  na_east: [
-    {
-      label: "Azena",
-      value: "azena",
-    },
-    {
-      label: "Una",
-      value: "una",
-    },
-    {
-      label: "Regulus",
-      value: "regulus",
-    },
-    {
-      label: "Avesta",
-      value: "avesta",
-    },
-    {
-      label: "Galatur",
-      value: "galatur",
-    },
-    {
-      label: "Karta",
-      value: "karta",
-    },
-    {
-      label: "Ladon",
-      value: "ladon",
-    },
-    {
-      label: "Kharmine",
-      value: "kharmine",
-    },
-    {
-      label: "Elzowin",
-      value: "elzowin",
-    },
-    {
-      label: "Sasha",
-      value: "sasha",
-    },
-    {
-      label: "Adrinne",
-      value: "adrinne",
-    },
-    {
-      label: "Aldebaran",
-      value: "aldebaran",
-    },
-    {
-      label: "Zosma",
-      value: "zosma",
-    },
-    {
-      label: "Vykas",
-      value: "vykas",
-    },
-    {
-      label: "Danube",
-      value: "danube",
-    },
-  ],
-  eu_central: [
-    {
-      label: "Neria",
-      value: "neria",
-    },
-    {
-      label: "Kadan",
-      value: "kadan",
-    },
-    {
-      label: "Trixion",
-      value: "trixion",
-    },
-    {
-      label: "Calvasus",
-      value: "calvasus",
-    },
-    {
-      label: "Thirain",
-      value: "thirain",
-    },
-    {
-      label: "Zinnervale",
-      value: "zinnervale",
-    },
-    {
-      label: "Asta",
-      value: "asta",
-    },
-    {
-      label: "Wei",
-      value: "wei",
-    },
-    {
-      label: "Slen",
-      value: "slen",
-    },
-    {
-      label: "Sceptrum",
-      value: "sceptrum",
-    },
-    {
-      label: "Procyon",
-      value: "procyon",
-    },
-    {
-      label: "Beatrice",
-      value: "beatrice",
-    },
-    {
-      label: "Inanna",
-      value: "inanna",
-    },
-    {
-      label: "Thaemine",
-      value: "thaemine",
-    },
-    {
-      label: "Sirius",
-      value: "sirius",
-    },
-    {
-      label: "Antares",
-      value: "antares",
-    },
-    {
-      label: "Brelshaza",
-      value: "brelshaza",
-    },
-    {
-      label: "Nineveh",
-      value: "nineveh",
-    },
-    {
-      label: "Mokoko",
-      value: "mokoko",
-    },
-  ],
-  eu_west: [
-    {
-      label: "Rethramis",
-      value: "rethramis",
-    },
-    {
-      label: "Tortoyk",
-      value: "tortoyk",
-    },
-    {
-      label: "Moonkeep",
-      value: "moonkeep",
-    },
-    {
-      label: "Stonehearth",
-      value: "stonehearth",
-    },
-    {
-      label: "Shadespire",
-      value: "shadespire",
-    },
-    {
-      label: "Tragon",
-      value: "tragon",
-    },
-    {
-      label: "Petrania",
-      value: "petrania",
-    },
-    {
-      label: "Punika",
-      value: "punika",
-    },
-  ],
-  sa: [
-    {
-      label: "Kazeros",
-      value: "kazeros",
-    },
-    {
-      label: "Agaton",
-      value: "agaton",
-    },
-    {
-      label: "Gienah",
-      value: "gienah",
-    },
-    {
-      label: "Arcturus",
-      value: "arcturus",
-    },
-    {
-      label: "Yorn",
-      value: "yorn",
-    },
-    {
-      label: "Feiton",
-      value: "feiton",
-    },
-    {
-      label: "Vern",
-      value: "vern",
-    },
-    {
-      label: "Kurzan",
-      value: "kurzan",
-    },
-    {
-      label: "Prideholme",
-      value: "prideholme",
-    },
-  ],
-  kr: [],
-  ru: [],
-};
-
 const isPwd = ref(true);
 const uploadKey = ref(settingsStore.settings.uploads.uploadKey);
-
-window.messageApi.receive("settings-changed", (value) => {
-  settingsStore.loadSettings(value);
-});
+const showAdvanced = ref(false);
 
 watch(uploadKey, (newVal, oldVal) => {
-  if (newVal.length !== 32) settingsStore.settings.uploads.uploadLogs = false;
-
+  if (newVal.length !== 32) changeUploadLogs(false);
   settingsStore.settings.uploads.uploadKey = newVal;
+
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.uploads.uploadKey",
+    value: newVal,
+    source: "main",
+  });
 });
 
-watch(selectedRegion, (newVal, oldVal) => {
-  settingsStore.settings.uploads.region = !newVal ? "" : newVal.value;
+function changeOpenOnUpload(val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.uploads.openOnUpload",
+    value: val,
+    source: "main",
+  });
+}
 
-  if (!newVal || (newVal && oldVal)) selectedServer.value = "";
-});
+function changeUploadUnlisted(val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.uploads.uploadUnlisted",
+    value: val,
+    source: "main",
+  });
+}
 
-watch(selectedServer, (newVal, oldVal) => {
-  settingsStore.settings.uploads.server = !newVal ? "" : newVal.value;
-});
+function changeIncludeRegion(val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.uploads.includeRegion",
+    value: val,
+    source: "main",
+  });
+}
 
-onMounted(() => {
-  selectedRegion.value = regions.find(
-    (x) => x.value === settingsStore.settings.uploads.region
-  );
-  const serverSection = servers[settingsStore.settings.uploads.region];
-  selectedServer.value = !serverSection
-    ? ""
-    : serverSection.find(
-        (x) => x.value === settingsStore.settings.uploads.server
-      );
+function changeUploadLogs(val) {
+  settingsStore.settings.uploads.uploadLogs = val;
 
-  recentSessions.value = settingsStore.settings.uploads.recentSessions;
-});
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.uploads.uploadLogs",
+    value: val,
+    source: "main",
+  });
+}
+
+function changeUploadUrl(val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.uploads.api",
+    value: val,
+    source: "main",
+  });
+}
+
+function changeFrontendUrl(val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.uploads.site",
+    value: val,
+    source: "main",
+  });
+}
+
+function changeUploadEndpoint(val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.uploads.uploadEndpoint",
+    value: val,
+    source: "main",
+  });
+}
+
+/**
+ * @param {'api' | 'site' | 'uploadEndpoint'} type
+ */
+function resetURL(type) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: `settings.uploads.${type}`,
+    value: undefined,
+    source: "both",
+  });
+}
 
 function openSite(url) {
   window.messageApi.send("window-to-main", {

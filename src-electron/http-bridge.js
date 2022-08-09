@@ -5,6 +5,7 @@ import { spawn } from "child_process";
 import fs from "fs";
 import log from "electron-log";
 import path from "path";
+import { AppSettings } from "./util/app-settings";
 
 export const httpServerEventEmitter = new EventEmitter();
 
@@ -17,6 +18,9 @@ function checkHost(requestHost) {
   return validHosts.includes(requestHost);
 }
 
+/**
+ * @param {AppSettings} appSettings
+ */
 export function setupBridge(appSettings) {
   httpServer = createServer((req, res) => {
     const isHostValid = checkHost(req.headers.host);
@@ -55,18 +59,22 @@ export function setupBridge(appSettings) {
   });
 }
 
+/**
+ * @param {AppSettings} appSettings
+ */
 function spawnPacketCapturer(appSettings, serverPort) {
   const args = ["--Port", serverPort];
 
-  if (appSettings?.general?.customLogPath !== null)
-    args.push("--CustomLogPath", appSettings?.general?.customLogPath);
+  const customLogPath = appSettings.get("settings.general.customLogPath");
+  if (customLogPath !== null && customLogPath !== undefined)
+    args.push("--CustomLogPath", customLogPath);
 
-  if (appSettings?.general?.useWinpcap) args.push("--UseNpcap");
+  const useWinpcap = appSettings.get("settings.general.useWinpcap");
+  if (useWinpcap) args.push("--UseNpcap");
 
-  if (appSettings?.general?.server === "russia")
-    args.push("--Region", "Russia");
-  else if (appSettings?.general?.server === "korea")
-    args.push("--Region", "Korea");
+  const gameServer = appSettings.get("settings.general.server");
+  if (gameServer === "russia") args.push("--Region", "Russia");
+  else if (gameServer === "korea") args.push("--Region", "Korea");
 
   try {
     let binaryFolder;

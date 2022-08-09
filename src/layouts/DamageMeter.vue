@@ -178,6 +178,20 @@
         <q-btn
           flat
           size="sm"
+          :disabled="settingsStore.settings.uploads.uploadKey.length != 32"
+          :label="`UPLOADING: ${
+            settingsStore.settings.uploads.uploadLogs ? ' ON' : ' OFF'
+          }`"
+          :color="
+            settingsStore.settings.uploads.uploadLogs ? 'positive' : 'negative'
+          "
+          @click="changeUploadLogs"
+        >
+          <q-tooltip>Toggles uploading encounters</q-tooltip>
+        </q-btn>
+        <q-btn
+          flat
+          size="sm"
           @click="requestSessionRestart"
           label="RESET SESSION"
         >
@@ -241,8 +255,10 @@ function toggleHeaderDisplay(tabName) {
     !settingsStore.settings.damageMeter.header[tabName].enabled;
 
   window.messageApi.send("window-to-main", {
-    message: "save-settings",
-    value: JSON.stringify(settingsStore.settings),
+    message: "change-setting",
+    setting: `settings.damageMeter.header.${tabName}.enabled`,
+    value: settings.damageMeter.header[tabName].enabled,
+    source: "damageMeter",
   });
 }
 
@@ -299,6 +315,18 @@ async function takeScreenshot() {
     message: "<center>Screenshot copied to clipboard.</center>",
     color: "primary",
     html: true,
+  });
+}
+
+function changeUploadLogs() {
+  const newVal = !settingsStore.settings.uploads.uploadLogs;
+  settingsStore.settings.uploads.uploadLogs = newVal;
+
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.uploads.uploadLogs",
+    value: newVal,
+    source: "damageMeter",
   });
 }
 
@@ -403,21 +431,25 @@ onMounted(() => {
           }
         }
       }
-    } else if (typeof value === "object" && value.name === "session-upload") {
-      if (value.failed) {
-        Notify.create({
-          message: value.message,
-          color: "red",
-        });
-      } else {
-        Notify.create({
-          message: value.message,
-          color: "primary",
-        });
-      }
     } else {
       Notify.create({
         message: value,
+      });
+    }
+  });
+
+  window.messageApi.receive("uploader-message", (value) => {
+    const { failed, message } = value;
+
+    if (failed) {
+      Notify.create({
+        message: message,
+        color: "red",
+      });
+    } else {
+      Notify.create({
+        message: message,
+        color: "primary",
       });
     }
   });

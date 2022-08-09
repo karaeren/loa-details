@@ -17,6 +17,7 @@
             settingsStore.settings.damageMeter.functionality
               .dontResetOnZoneChange
           "
+          @update:model-value="changeDontResetOnZoneChange"
         />
       </q-item-section>
 
@@ -37,6 +38,7 @@
             settingsStore.settings.damageMeter.functionality
               .pauseOnPhaseTransition
           "
+          @update:model-value="changePauseOnPhaseTransition"
         />
       </q-item-section>
 
@@ -58,6 +60,7 @@
             settingsStore.settings.damageMeter.functionality
               .resetAfterPhaseTransition
           "
+          @update:model-value="changeResetAfterPhaseTransition"
         />
       </q-item-section>
 
@@ -83,6 +86,7 @@
           v-model="
             settingsStore.settings.damageMeter.functionality.autoMinimize
           "
+          @update:model-value="changeDoAutoMinimize"
         />
       </q-item-section>
 
@@ -105,6 +109,7 @@
           v-model="
             settingsStore.settings.damageMeter.functionality.minimizeToTaskbar
           "
+          @update:model-value="changeMinimizeTaskBar"
         />
       </q-item-section>
 
@@ -126,12 +131,7 @@
           :model-value="
             settingsStore.settings.damageMeter.functionality.autoMinimizeTimer
           "
-          @change="
-            (val) => {
-              settingsStore.settings.damageMeter.functionality.autoMinimizeTimer =
-                val;
-            }
-          "
+          @change="changeAutoMinimizeTimer"
           :min="5"
           :max="180"
           label
@@ -148,6 +148,7 @@
             settingsStore.settings.damageMeter.functionality
               .removeOverkillDamage
           "
+          @update:model-value="changeRemoveOverkillDamage"
         />
       </q-item-section>
       <q-item-section>
@@ -171,6 +172,7 @@
           filled
           v-model="nameDisplayModel"
           :options="nameDisplayOptions"
+          v-on:model-update="updateNameDisplayModel"
         />
       </q-item-section>
     </q-item>
@@ -182,6 +184,7 @@
       <q-item-section side top>
         <q-checkbox
           v-model="settingsStore.settings.damageMeter.design.compactDesign"
+          @update:model-value="changeCompactDesign"
         />
       </q-item-section>
 
@@ -198,6 +201,7 @@
       <q-item-section side top>
         <q-checkbox
           v-model="settingsStore.settings.damageMeter.design.pinUserToTop"
+          @update:model-value="changePinMyBar"
         />
       </q-item-section>
 
@@ -220,11 +224,7 @@
       <q-item-section>
         <q-slider
           :model-value="settingsStore.settings.damageMeter.design.opacity"
-          @change="
-            (val) => {
-              settingsStore.settings.damageMeter.design.opacity = val;
-            }
-          "
+          @change="changeOpacity"
           :min="0.1"
           :max="1"
           :step="0.1"
@@ -247,6 +247,7 @@
       <q-item-section side top>
         <q-checkbox
           v-model="settingsStore.settings.damageMeter.header[tabName].enabled"
+          @update:model-value="(val) => changeHeaderSetting(tabName, val)"
         />
       </q-item-section>
 
@@ -269,6 +270,7 @@
       <q-item-section side top>
         <q-checkbox
           v-model="settingsStore.settings.damageMeter.tabs[tabName].enabled"
+          @update:model-value="(val) => changeTabSetting(tabName, val)"
         />
       </q-item-section>
 
@@ -301,14 +303,7 @@
           >
             You ({{ className }})
           </div>
-          <span
-            @click="
-              settingsStore.settings.damageMeter.classes[className].color =
-                settingsStore.settings.damageMeter.classes[
-                  className
-                ].defaultColor
-            "
-          >
+          <span @click="resetClassColors(className)">
             Reset {{ className }} color
           </span>
         </q-item-label>
@@ -329,13 +324,7 @@
                   :model-value="
                     settingsStore.settings.damageMeter.classes[className].color
                   "
-                  @change="
-                    (val) => {
-                      settingsStore.settings.damageMeter.classes[
-                        className
-                      ].color = val;
-                    }
-                  "
+                  @change="(val) => changeClassColor(className, val)"
                 />
               </q-popup-proxy>
             </q-icon>
@@ -386,15 +375,156 @@ const nameDisplayOptions = ref([
   },
 ]);
 
+function resetDamageMeterPosition() {
+  window.messageApi.send("window-to-main", {
+    message: "reset-damage-meter-position",
+  });
+}
+
+function changeDontResetOnZoneChange(val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.damageMeter.functionality.dontResetOnZoneChange",
+    value: val,
+    source: "main",
+  });
+}
+
+function changePauseOnPhaseTransition(val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.damageMeter.functionality.pauseOnPhaseTransition",
+    value: val,
+    source: "main",
+  });
+}
+
+function changeResetAfterPhaseTransition(val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.damageMeter.functionality.resetAfterPhaseTransition",
+    value: val,
+    source: "main",
+  });
+}
+
+function changeDoAutoMinimize(val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.damageMeter.functionality.minimizeToTaskbar",
+    value: val,
+    source: "main",
+  });
+}
+
+function changeMinimizeTaskBar(val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.damageMeter.functionality.minimizeToTaskbar",
+    value: val,
+    source: "main",
+  });
+}
+
+function changeAutoMinimizeTimer(val) {
+  settingsStore.settings.damageMeter.functionality.autoMinimizeTimer = val;
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.damageMeter.functionality.autoMinimizeTimer",
+    value: val,
+    source: "main",
+  });
+}
+
+function changeRemoveOverkillDamage(val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.damageMeter.functionality.removeOverkillDamage",
+    value: val,
+    source: "main",
+  });
+}
+
 var nameDisplayModel = ref("");
 
 watch(nameDisplayModel, (newVal, oldVal) => {
   settingsStore.settings.damageMeter.functionality.nameDisplayV2 = newVal.value;
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.damageMeter.functionality.nameDisplayV2",
+    value: newVal.value,
+    source: "main",
+  });
 });
 
-function resetDamageMeterPosition() {
+function changeCompactDesign(val) {
   window.messageApi.send("window-to-main", {
-    message: "reset-damage-meter-position",
+    message: "change-setting",
+    setting: "settings.damageMeter.design.compactDesign",
+    value: val,
+    source: "main",
+  });
+}
+
+function changePinMyBar(val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.damageMeter.design.pinUserToTop",
+    value: val,
+    source: "main",
+  });
+}
+
+function changeOpacity(val) {
+  settingsStore.settings.damageMeter.design.opacity = val;
+
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.damageMeter.design.opacity",
+    value: val,
+    source: "main",
+  });
+}
+
+function changeHeaderSetting(tabName, val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: `settings.damageMeter.header.${tabName}.enabled`,
+    value: val,
+    source: "main",
+  });
+}
+
+function changeTabSetting(tabName, val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: `settings.damageMeter.tabs.${tabName}.enabled`,
+    value: val,
+    source: "main",
+  });
+}
+
+function changeClassColor(className, color) {
+  settingsStore.settings.damageMeter.classes[className].color = color;
+
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: `settings.classes.${className}.color`,
+    value: color,
+    source: "main",
+  });
+}
+
+function resetClassColors(className) {
+  const newVal =
+    settingsStore.settings.damageMeter.classes[className].defaultColor;
+  settingsStore.settings.damageMeter.classes[className].color = newVal;
+
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: `settings.classes.${className}.color`,
+    value: newVal,
+    source: "main",
   });
 }
 

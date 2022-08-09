@@ -4,7 +4,10 @@
 
     <q-item tag="label">
       <q-item-section side top>
-        <q-checkbox v-model="settingsStore.settings.general.startMainHidden" />
+        <q-checkbox
+          v-model="settingsStore.settings.general.startMainHidden"
+          @update:model-value="changeStartMainHidden"
+        />
       </q-item-section>
 
       <q-item-section>
@@ -20,6 +23,7 @@
       <q-item-section side top>
         <q-checkbox
           v-model="settingsStore.settings.general.startMainMinimized"
+          @update:model-value="changeStartMinimized"
         />
       </q-item-section>
 
@@ -35,6 +39,7 @@
       <q-item-section side top>
         <q-checkbox
           v-model="settingsStore.settings.general.closeToSystemTray"
+          @update:model-value="changeMinimizeToTray"
         />
       </q-item-section>
 
@@ -49,7 +54,10 @@
 
     <q-item tag="label">
       <q-item-section side top>
-        <q-checkbox v-model="settingsStore.settings.general.useWinpcap" />
+        <q-checkbox
+          v-model="settingsStore.settings.general.useWinpcap"
+          @update:model-value="changeUseWinpcap"
+        />
       </q-item-section>
 
       <q-item-section>
@@ -63,7 +71,10 @@
 
     <q-item tag="label">
       <q-item-section side top>
-        <q-checkbox v-model="settingsStore.settings.general.saveScreenshots" />
+        <q-checkbox
+          v-model="settingsStore.settings.general.saveScreenshots"
+          @update:model-value="changeSaveScreenshots"
+        />
       </q-item-section>
 
       <q-item-section>
@@ -136,9 +147,62 @@ const serverOptions = ref([
     value: "korea",
   },
 ]);
+
+function changeStartMainHidden(val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.general.startMainHidden",
+    value: val,
+    source: "main",
+  });
+}
+
+function changeStartMinimized(val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.general.startMainMinimized",
+    value: val,
+    source: "main",
+  });
+}
+
+function changeMinimizeToTray(val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.general.closeToSystemTray",
+    value: val,
+    source: "main",
+  });
+}
+
+function changeUseWinpcap(val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.general.useWinpcap",
+    value: val,
+    source: "main",
+  });
+}
+
+function changeSaveScreenshots(val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.general.saveScreenshots",
+    value: val,
+    source: "main",
+  });
+}
+
 var serverModel = ref("");
 watch(serverModel, (newVal, oldVal) => {
   settingsStore.settings.general.server = newVal.value;
+
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.general.server",
+    value: newVal.value,
+    source: "main",
+  });
 });
 
 const currentLogPath = ref("");
@@ -150,6 +214,13 @@ function selectCustomLogPath() {
 function resetLogPath() {
   settingsStore.settings.general.customLogPath = null;
   currentLogPath.value = "Documents/Lost Ark Logs (needs restart)";
+
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.general.customLogPath",
+    value: undefined,
+    source: "main",
+  });
 }
 
 onMounted(() => {

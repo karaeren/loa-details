@@ -30,15 +30,15 @@ export const useSettingsStore = defineStore("settings", {
         },
       },
       uploads: {
+        uploadUnlisted: true,
+        includeRegion: false,
         uploadLogs: false,
         uploadKey: "",
-        apiUrl: process.env.UPLOADS_API_URL,
+        api: process.env.UPLOADS_API_URL,
         uploadEndpoint: "/logs/upload",
-        loginUrl: process.env.UPLOADS_LOGIN_URL,
+        site: process.env.UPLOADS_LOGIN_URL,
         region: "",
-        server: "",
         openOnUpload: false,
-        recentSessions: [],
       },
       damageMeter: {
         functionality: {

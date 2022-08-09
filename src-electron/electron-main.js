@@ -19,7 +19,7 @@ import {
   createDamageMeterWindow,
 } from "./electron-windows";
 
-import { getSettings, saveSettings } from "./util/app-settings";
+import { AppSettings } from "./util/app-settings";
 
 import {
   updaterEventEmitter,
@@ -28,10 +28,8 @@ import {
 } from "./util/updater";
 
 import { saveScreenshot } from "./util/screenshot";
-
-const { LogParser } = require("loa-details-log-parser");
-
-const { mainFolder } = require("./util/directories");
+import { LogParser } from "loa-details-log-parser";
+import { mainFolder } from "./util/directories";
 
 import {
   parseLogs,
@@ -39,8 +37,6 @@ import {
   getLogData,
   wipeParsedLogs,
 } from "./log-parser/file-parser";
-
-const store = new Store();
 
 let prelauncherWindow, mainWindow, damageMeterWindow;
 let tray = null;
@@ -66,18 +62,43 @@ initialize();
 const logParser = new LogParser((isLive = true));
 logParser.debugLines = true;
 
-let appSettings = getSettings();
+const appSettings = new AppSettings();
 
-logParser.dontResetOnZoneChange =
-  appSettings?.damageMeter?.functionality?.dontResetOnZoneChange;
+appSettings.on("change", (change) => {
+  let { key, value } = change;
 
-logParser.resetAfterPhaseTransition =
-  appSettings?.damageMeter?.functionality?.resetAfterPhaseTransition;
+  switch (key) {
+    case "dontResetOnZoneChange":
+      logParser.dontResetOnZoneChange = value;
+      break;
+    case "removeOverkillDamage":
+      logParser.removeOverkillDamage = value;
+      break;
+    case "resetAfterPhaseTransition":
+      logParser.resetAfterPhaseTransition = value;
+      break;
+    case "opacity":
+      damageMeterWindow.setOpacity(value);
+      break;
+    case "shortcut":
+      updateShortcuts(appSettings);
+      break;
+  }
+});
 
-logParser.removeOverkillDamage =
-  appSettings?.damageMeter?.functionality?.removeOverkillDamage;
+appSettings.set("settings.appVersion", app.getVersion());
 
-appSettings.appVersion = app.getVersion();
+logParser.dontResetOnZoneChange = appSettings.get(
+  "settings.damageMeter.functionality.dontResetOnZoneChange"
+);
+
+logParser.resetAfterPhaseTransition = appSettings.get(
+  "settings.damageMeter.functionality.resetAfterPhaseTransition"
+);
+
+logParser.removeOverkillDamage = appSettings.get(
+  "settings.damageMeter.functionality.removeOverkillDamage"
+);
 
 // needed in case process is undefined under Linux
 const platform = process.platform || os.platform();
@@ -239,31 +260,26 @@ const ipcFunctions = {
       logParser.cancelReset();
     }
   },
-  "save-settings": (event, arg) => {
-    appSettings = JSON.parse(arg.value);
-    saveSettings(arg.value);
+  "change-setting": (event, arg) => {
+    const { setting, value, source } = arg;
+    appSettings.set(setting, value);
 
-    updateShortcuts(appSettings);
-
-    mainWindow.webContents.send("on-settings-change", appSettings);
-    damageMeterWindow.webContents.send("on-settings-change", appSettings);
-
-    logParser.dontResetOnZoneChange =
-      appSettings.damageMeter.functionality.dontResetOnZoneChange;
-
-    logParser.removeOverkillDamage =
-      appSettings.damageMeter.functionality.removeOverkillDamage;
-
-    logParser.resetAfterPhaseTransition =
-      appSettings?.damageMeter?.functionality?.resetAfterPhaseTransition;
-
-    damageMeterWindow.setOpacity(appSettings.damageMeter.design.opacity);
+    const update = appSettings.get("settings");
+    if (source === "both") {
+      mainWindow.webContents.send("on-settings-change", update);
+      damageMeterWindow.webContents.send("on-settings-change", update);
+    } else if (source === "damageMeter") {
+      mainWindow.webContents.send("on-settings-change", update);
+    } else {
+      damageMeterWindow.webContents.send("on-settings-change", update);
+    }
   },
   "get-settings": (event, arg) => {
-    event.reply("on-settings-change", appSettings);
+    event.reply("on-settings-change", appSettings.get("settings"));
   },
   "parse-logs": async (event, arg) => {
-    await parseLogs(event, appSettings?.logs?.splitOnPhaseTransition);
+    const shouldSplit = appSettings.get("settings.logs.splitOnPhaseTransition");
+    await parseLogs(event, shouldSplit);
   },
   "get-parsed-logs": async (event, arg) => {
     const parsedLogs = await getParsedLogs();
@@ -294,15 +310,21 @@ const ipcFunctions = {
   "select-log-path-folder": async (event, arg) => {
     const res = await dialog.showOpenDialog({ properties: ["openDirectory"] });
     if (res.canceled || !res.filePaths || !res.filePaths[0]) return;
+
+    appSettings.set("settings.general.customLogPath", res.filePaths[0]);
     event.reply("selected-log-path-folder", res.filePaths[0]);
   },
   "reset-damage-meter-position": async (event, arg) => {
     damageMeterWindow.setPosition(0, 0);
-    store.set(`windows.damage_meter.X`, 0);
-    store.set(`windows.damage_meter.Y`, 0);
+    appSettings.set(`windows.damage_meter.X`, 0);
+    appSettings.set(`windows.damage_meter.Y`, 0);
   },
   "toggle-damage-meter-minimized-state": (event, arg) => {
-    if (appSettings.damageMeter.functionality.minimizeToTaskbar) {
+    const minimizeToTaskbar = appSettings.get(
+      "settings.damageMeter.functionality.minimizeToTaskbar"
+    );
+
+    if (minimizeToTaskbar) {
       if (arg.value) damageMeterWindow.minimize();
       else damageMeterWindow.restore();
     } else {

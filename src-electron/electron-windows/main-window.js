@@ -2,7 +2,11 @@ import { app, BrowserWindow } from "electron";
 import { enable } from "@electron/remote/main";
 import path from "path";
 import { initWindow } from "../util/window-init";
+import { AppSettings } from "../util/app-settings";
 
+/**
+ * @param {AppSettings} appSettings
+ */
 export function createMainWindow(appSettings) {
   let mainWindow = new BrowserWindow({
     icon: path.resolve(__dirname, "icons/icon.png"), // tray icon
@@ -26,11 +30,8 @@ export function createMainWindow(appSettings) {
     },
   });
 
-  let startHidden = false;
-  if (appSettings?.general?.startMainHidden) startHidden = true;
-
-  let startMinimized = false;
-  if (appSettings?.general?.startMainMinimized) startMinimized = true;
+  const startHidden = appSettings.get("settings.general.startMainHidden");
+  const startMinimized = appSettings.get("settings.general.startMainMinimized");
 
   enable(mainWindow.webContents);
   mainWindow.loadURL(process.env.APP_URL + "#/").then(() => {

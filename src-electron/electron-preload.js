@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld("messageApi", {
     let validChannels = [
       "updater-message",
       "pcap-on-message",
+      "uploader-message",
       "pcap-on-state-change",
       "pcap-on-reset-state",
       "on-settings-change",

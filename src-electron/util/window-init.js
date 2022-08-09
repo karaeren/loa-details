@@ -3,8 +3,9 @@
   of windows to be loaded back on next open.
 */
 import Store from "electron-store";
+import { AppSettings } from "./app-settings";
 
-const store = new Store();
+const store = new AppSettings();
 
 export function initWindow(window, name) {
   const windowOptions = store.get(`windows.` + name);

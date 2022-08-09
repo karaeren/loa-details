@@ -254,8 +254,10 @@ function toggleTabDisplay(tabName) {
     !settingsStore.settings.damageMeter.tabs[tabName].enabled;
 
   window.messageApi.send("window-to-main", {
-    message: "save-settings",
-    value: JSON.stringify(settingsStore.settings),
+    message: "change-setting",
+    setting: `settings.damageMeter.tabs.${tabName}.enabled`,
+    value: settingsStore.settings.damageMeter.tabs[tabName].enabled,
+    source: "damageMeter",
   });
 }
 

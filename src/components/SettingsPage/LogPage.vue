@@ -5,6 +5,7 @@
       <q-item-section side top>
         <q-checkbox
           v-model="settingsStore.settings.logs.splitOnPhaseTransition"
+          @update:model-value="chnageSplitOnPhaseTransition"
         />
       </q-item-section>
 
@@ -28,11 +29,7 @@
           :model-value="
             settingsStore.settings.logs.minimumSessionDurationInMinutes
           "
-          @change="
-            (val) => {
-              settingsStore.settings.logs.minimumSessionDurationInMinutes = val;
-            }
-          "
+          @change="changeMinSessionDuration"
           color="primary"
           label-always
           switch-label-side
@@ -72,12 +69,7 @@
           :model-value="
             settingsStore.settings.logs.minimumEncounterDurationInMinutes
           "
-          @change="
-            (val) => {
-              settingsStore.settings.logs.minimumEncounterDurationInMinutes =
-                val;
-            }
-          "
+          @change="changeMinEncounterDuration"
           color="primary"
           label-always
           switch-label-side
@@ -129,6 +121,37 @@
 <script setup>
 import { useSettingsStore } from "src/stores/settings";
 const settingsStore = useSettingsStore();
+
+function chnageSplitOnPhaseTransition(val) {
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.logs.splitOnPhaseTransition",
+    value: val,
+    source: "main",
+  });
+}
+
+function changeMinSessionDuration(val) {
+  settingsStore.settings.logs.minimumSessionDurationInMinutes = val;
+
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.logs.minimumSessionDurationInMinutes",
+    value: val,
+    source: "main",
+  });
+}
+
+function changeMinEncounterDuration(val) {
+  settingsStore.settings.logs.minimumEncounterDurationInMinutes = val;
+
+  window.messageApi.send("window-to-main", {
+    message: "change-setting",
+    setting: "settings.logs.minimumEncounterDurationInMinutes",
+    value: val,
+    source: "main",
+  });
+}
 
 function wipeParsedLogs() {
   window.messageApi.send("window-to-main", {

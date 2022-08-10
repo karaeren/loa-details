@@ -1,12 +1,14 @@
 import Store from "electron-store";
 import log from "electron-log";
-import { cloneDeep, merge } from "lodash";
 import { EventEmitter } from "events";
 import { classes } from "./classes";
 
 const legacyStore = new Store();
 
 export class AppSettings extends EventEmitter {
+  /**
+   * @type {Store}
+   */
   static settings = undefined;
 
   constructor() {
@@ -14,6 +16,24 @@ export class AppSettings extends EventEmitter {
 
     if (AppSettings.settings) return;
     AppSettings.settings = new Store({ name: "app-settings", schema });
+
+    this.#migrateLegacyStore();
+  }
+
+  #migrateLegacyStore() {
+    const migrated = legacyStore.get("migrated");
+
+    if (!migrated) {
+      log.info("Migrating legacy settings");
+      legacyStore.set("migrated", true);
+
+      const legacySettings = legacyStore.get("settings");
+      const legacyWindows = legacyStore.get("windows");
+
+      if (legacySettings)
+        AppSettings.settings.set("settings", JSON.parse(legacySettings));
+      if (legacyWindows) AppSettings.settings.set("windows", legacyWindows);
+    }
   }
 
   get(key) {
@@ -22,7 +42,7 @@ export class AppSettings extends EventEmitter {
 
   set(key, value) {
     if (value === undefined || value === null) {
-      AppSettings.settings.delete(key);
+      AppSettings.settings.reset(key);
     } else {
       AppSettings.settings.set(key, value);
     }
@@ -30,33 +50,6 @@ export class AppSettings extends EventEmitter {
 
     this.emit("change", { key: actualKey, value });
   }
-}
-
-export function getSettings() {
-  let appSettings = cloneDeep(defaultSettings);
-
-  try {
-    let settingsStr = legacyStore.get("settings");
-
-    if (typeof settingsStr === "object")
-      appSettings = merge(appSettings, cloneDeep(settingsStr));
-    else if (typeof settingsStr === "string")
-      merge(appSettings, JSON.parse(settingsStr));
-
-    log.info("Found and applied settings.");
-  } catch (e) {
-    log.info("Setting retrieval failed: " + e);
-  }
-
-  return appSettings;
-}
-
-export function saveSettings(settings) {
-  if (typeof settings === "object")
-    legacyStore.set("settings", JSON.stringify(settings));
-  else legacyStore.set("settings", settings);
-
-  log.info(`Saved settings: ${settings}`);
 }
 
 const schema = {
@@ -513,140 +506,12 @@ const schema = {
               },
             },
           },
+          classes: {
+            type: "object",
+            default: classes,
+          },
         },
       },
-      classes: {
-        type: "object",
-        default: classes,
-      },
     },
-  },
-};
-
-// TODO: find a better way to handle this
-const defaultSettings = {
-  appVersion: "",
-  general: {
-    startMainHidden: false,
-    startMainMinimized: false,
-    closeToSystemTray: true,
-    useWinpcap: false,
-    saveScreenshots: true,
-    server: "steam",
-    customLogPath: null,
-  },
-  shortcuts: {
-    minimizeDamageMeter: {
-      value: "CommandOrControl+Down",
-      defaultValue: "CommandOrControl+Down",
-    },
-    resetSession: {
-      value: "CommandOrControl+Up",
-      defaultValue: "CommandOrControl+Up",
-    },
-    pauseDamageMeter: {
-      value: "CommandOrControl+Right",
-      defaultValue: "CommandOrControl+Right",
-    },
-  },
-  uploads: {
-    uploadLogs: false,
-    uploadKey: "",
-    apiUrl: process.env.UPLOADS_API_URL,
-    uploadEndpoint: "/logs/upload",
-    loginUrl: process.env.UPLOADS_LOGIN_URL,
-    region: "",
-    server: "",
-    openOnUpload: false,
-    recentSessions: [],
-  },
-  damageMeter: {
-    functionality: {
-      dontResetOnZoneChange: false,
-      removeOverkillDamage: true,
-      pauseOnPhaseTransition: true,
-      resetAfterPhaseTransition: true,
-      autoMinimize: false,
-      autoMinimizeTimer: 60,
-      minimizeToTaskbar: false,
-      nameDisplay: "name+class",
-      nameDisplayV2: "name+gear+class",
-    },
-    design: {
-      compactDesign: false,
-      pinUserToTop: false,
-      opacity: 0.9,
-    },
-    header: {
-      damage: {
-        name: "Damage",
-        enabled: true,
-      },
-      dps: {
-        name: "DPS",
-        enabled: true,
-      },
-      tank: {
-        name: "Tanked",
-        enabled: false,
-      },
-    },
-    tabs: {
-      damage: {
-        name: "Damage/Tanked",
-        enabled: true,
-      },
-      deathTime: {
-        name: "Death Time",
-        enabled: false,
-      },
-      damagePercent: {
-        name: "D% (Damage Percent)",
-        enabled: true,
-      },
-      dps: {
-        name: "DPS/TPS",
-        enabled: true,
-      },
-      critRate: {
-        name: "Crit Rate",
-        enabled: true,
-      },
-      faRate: {
-        name: "Front Attack Rate",
-        enabled: true,
-      },
-      baRate: {
-        name: "Back Attack Rate",
-        enabled: true,
-      },
-      counterCount: {
-        name: "Counter Count",
-        enabled: true,
-      },
-      maxDmg: {
-        name: "Skill View / Max Damage",
-        enabled: true,
-      },
-      avgDmg: {
-        name: "Skill View / Average Damage",
-        enabled: true,
-      },
-      totalHits: {
-        name: "Skill View / Total Hits",
-        enabled: true,
-      },
-      hpm: {
-        name: "Skill View / Hits per Minute",
-        enabled: true,
-      },
-    },
-    classes: {},
-  },
-  logs: {
-    minimumSessionDurationInMinutes: 1,
-    minimumEncounterDurationInMinutes: 0.5,
-    minimumDurationInMinutes: 0.0,
-    splitOnPhaseTransition: true,
   },
 };

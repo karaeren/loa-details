@@ -36,6 +36,13 @@ import { useSettingsStore } from "src/stores/settings";
 const settingsStore = useSettingsStore();
 
 let tab = ref("general");
+
+settingsStore.$subscribe(() => {
+  window.messageApi.send("window-to-main", {
+    message: "save-settings",
+    value: JSON.parse(JSON.stringify(settingsStore.settings)),
+  });
+});
 </script>
 
 <style>

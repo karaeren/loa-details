@@ -151,5 +151,18 @@ export const useSettingsStore = defineStore("settings", {
     loadSettings(settingsToLoad) {
       merge(this.settings, settingsToLoad);
     },
+    change(setting, value) {
+      window.messageApi.send("window-to-main", {
+        message: "change-setting",
+        setting: setting,
+        value: value,
+      });
+    },
+    reset(setting) {
+      window.messageApi.send("window-to-main", {
+        message: "reset-setting",
+        setting: setting,
+      });
+    },
   },
 });

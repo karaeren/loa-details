@@ -59,6 +59,7 @@ module.exports = configure(function (/* ctx */) {
       env: {
         UPLOADS_API_URL: "https://api.lail.ai",
         UPLOADS_LOGIN_URL: "https://lail.ai",
+        UPLOADS_ENDPOINT: "/logs/upload",
       },
 
       // vueRouterBase,

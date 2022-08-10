@@ -260,19 +260,40 @@ const ipcFunctions = {
       logParser.cancelReset();
     }
   },
+  "save-settings": (event, arg) => {
+    appSettings.set("settings", arg.value);
+    updateShortcuts(appSettings);
+
+    const update = appSettings.get("settings");
+    mainWindow.webContents.send("on-settings-change", update);
+    damageMeterWindow.webContents.send("on-settings-change", update);
+
+    logParser.dontResetOnZoneChange = appSettings.get(
+      "settings.damageMeter.functionality.dontResetOnZoneChange"
+    );
+
+    logParser.removeOverkillDamage = appSettings.get(
+      "settings.damageMeter.functionality.removeOverkillDamage"
+    );
+
+    logParser.resetAfterPhaseTransition = appSettings.get(
+      "settings.damageMeter.functionality.resetAfterPhaseTransition"
+    );
+
+    logParser.dontResetOnZoneChange = appSettings.get(
+      "settings.damageMeter.functionality.dontResetOnZoneChange"
+    );
+
+    const opacity = appSettings.get("settings.damageMeter.design.opacity");
+    damageMeterWindow.setOpacity(opacity);
+  },
   "change-setting": (event, arg) => {
-    const { setting, value, source } = arg;
+    const { setting, value } = arg;
     appSettings.set(setting, value);
 
     const update = appSettings.get("settings");
-    if (source === "both") {
-      mainWindow.webContents.send("on-settings-change", update);
-      damageMeterWindow.webContents.send("on-settings-change", update);
-    } else if (source === "damageMeter") {
-      mainWindow.webContents.send("on-settings-change", update);
-    } else {
-      damageMeterWindow.webContents.send("on-settings-change", update);
-    }
+    mainWindow.webContents.send("on-settings-change", update);
+    damageMeterWindow.webContents.send("on-settings-change", update);
   },
   "get-settings": (event, arg) => {
     event.reply("on-settings-change", appSettings.get("settings"));
@@ -371,7 +392,7 @@ ipcMain.on("window-to-main", (event, arg) => {
   const ipcFunction =
     ipcFunctions[arg.message] ||
     (() => {
-      log.error("Unknown winodw-to-main message: " + arg.message);
+      log.error("Unknown window-to-main message: " + arg.message);
     });
   ipcFunction(event, arg);
 });

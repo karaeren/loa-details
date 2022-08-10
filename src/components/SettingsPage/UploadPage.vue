@@ -4,10 +4,7 @@
 
     <q-item tag="label">
       <q-item-section side top>
-        <q-checkbox
-          v-model="settingsStore.settings.uploads.openOnUpload"
-          @update:model-value="changeOpenOnUpload"
-        />
+        <q-checkbox v-model="settingsStore.settings.uploads.openOnUpload" />
       </q-item-section>
 
       <q-item-section>
@@ -20,10 +17,7 @@
 
     <q-item tag="label">
       <q-item-section side top>
-        <q-checkbox
-          v-model="settingsStore.settings.uploads.uploadUnlisted"
-          @update:model-value="changeUploadUnlisted"
-        />
+        <q-checkbox v-model="settingsStore.settings.uploads.uploadUnlisted" />
       </q-item-section>
 
       <q-item-section>
@@ -37,10 +31,7 @@
 
     <q-item tag="label">
       <q-item-section side top>
-        <q-checkbox
-          v-model="settingsStore.settings.uploads.includeRegion"
-          @update:model-value="changeIncludeRegion"
-        />
+        <q-checkbox v-model="settingsStore.settings.uploads.includeRegion" />
       </q-item-section>
 
       <q-item-section>
@@ -63,19 +54,12 @@
 
     <q-item
       tag="label"
-      :disable="
-        settingsStore.settings.uploads.uploadKey.length < 32 ||
-        settingsStore.settings.uploads.uploadKey.length > 32
-      "
+      :disable="settingsStore.settings.uploads.uploadKey.length !== 32"
     >
       <q-item-section side top>
         <q-checkbox
-          :disable="
-            settingsStore.settings.uploads.uploadKey.length < 32 ||
-            settingsStore.settings.uploads.uploadKey.length > 32
-          "
+          :disable="settingsStore.settings.uploads.uploadKey.length !== 32"
           v-model="settingsStore.settings.uploads.uploadLogs"
-          @update:model-value="changeUploadLogs"
         />
       </q-item-section>
 
@@ -153,10 +137,9 @@
             v-model="settingsStore.settings.uploads.api"
             type="text"
             label="Upload Server"
-            @update:model-value="changeUploadUrl"
             clearable
             clear-icon="refresh"
-            @clear="resetURL('api')"
+            @clear="resetUrl('api')"
           >
           </q-input>
         </q-item-section>
@@ -174,10 +157,9 @@
             v-model="settingsStore.settings.uploads.uploadEndpoint"
             type="text"
             label="Endpoint"
-            @update:model-value="changeUploadEndpoint"
             clearable
             clear-icon="refresh"
-            @clear="resetURL('uploadEndpoint')"
+            @clear="resetUrl('endpoint')"
           >
           </q-input>
         </q-item-section>
@@ -193,10 +175,9 @@
             v-model="settingsStore.settings.uploads.site"
             type="text"
             label="Frontend"
-            @update:model-value="changeFrontendUrl"
             clearable
             clear-icon="refresh"
-            @clear="resetURL('site')"
+            @clear="resetUrl('site')"
           >
           </q-input>
         </q-item-section>
@@ -206,101 +187,36 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { onMounted, ref, watch } from "vue";
 import { useSettingsStore } from "src/stores/settings";
 const settingsStore = useSettingsStore();
 
 const isPwd = ref(true);
-const uploadKey = ref(settingsStore.settings.uploads.uploadKey);
+const uploadKey = ref("");
 const showAdvanced = ref(false);
 
 watch(uploadKey, (newVal, oldVal) => {
-  if (newVal.length !== 32) changeUploadLogs(false);
   settingsStore.settings.uploads.uploadKey = newVal;
-
-  window.messageApi.send("window-to-main", {
-    message: "change-setting",
-    setting: "settings.uploads.uploadKey",
-    value: newVal,
-    source: "main",
-  });
+  if (newVal.length !== 32) settingsStore.settings.uploads.uploadLogs = false;
 });
 
-function changeOpenOnUpload(val) {
-  window.messageApi.send("window-to-main", {
-    message: "change-setting",
-    setting: "settings.uploads.openOnUpload",
-    value: val,
-    source: "main",
-  });
-}
+onMounted(() => {
+  uploadKey.value = settingsStore.settings.uploads.uploadKey;
+});
 
-function changeUploadUnlisted(val) {
-  window.messageApi.send("window-to-main", {
-    message: "change-setting",
-    setting: "settings.uploads.uploadUnlisted",
-    value: val,
-    source: "main",
-  });
-}
-
-function changeIncludeRegion(val) {
-  window.messageApi.send("window-to-main", {
-    message: "change-setting",
-    setting: "settings.uploads.includeRegion",
-    value: val,
-    source: "main",
-  });
-}
-
-function changeUploadLogs(val) {
-  settingsStore.settings.uploads.uploadLogs = val;
-
-  window.messageApi.send("window-to-main", {
-    message: "change-setting",
-    setting: "settings.uploads.uploadLogs",
-    value: val,
-    source: "main",
-  });
-}
-
-function changeUploadUrl(val) {
-  window.messageApi.send("window-to-main", {
-    message: "change-setting",
-    setting: "settings.uploads.api",
-    value: val,
-    source: "main",
-  });
-}
-
-function changeFrontendUrl(val) {
-  window.messageApi.send("window-to-main", {
-    message: "change-setting",
-    setting: "settings.uploads.site",
-    value: val,
-    source: "main",
-  });
-}
-
-function changeUploadEndpoint(val) {
-  window.messageApi.send("window-to-main", {
-    message: "change-setting",
-    setting: "settings.uploads.uploadEndpoint",
-    value: val,
-    source: "main",
-  });
-}
-
-/**
- * @param {'api' | 'site' | 'uploadEndpoint'} type
- */
-function resetURL(type) {
-  window.messageApi.send("window-to-main", {
-    message: "change-setting",
-    setting: `settings.uploads.${type}`,
-    value: undefined,
-    source: "both",
-  });
+function resetUrl(type) {
+  switch (type) {
+    case "api":
+      settingsStore.settings.uploads.api = process.env.UPLOADS_API_URL;
+      break;
+    case "site":
+      settingsStore.settings.uploads.site = process.env.UPLOADS_LOGIN_URL;
+      break;
+    case "endpoint":
+      settingsStore.settings.uploads.uploadEndpoint =
+        process.env.UPLOADS_ENDPOINT;
+      break;
+  }
 }
 
 function openSite(url) {

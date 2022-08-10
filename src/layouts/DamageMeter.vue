@@ -254,12 +254,10 @@ function toggleHeaderDisplay(tabName) {
   settingsStore.settings.damageMeter.header[tabName].enabled =
     !settingsStore.settings.damageMeter.header[tabName].enabled;
 
-  window.messageApi.send("window-to-main", {
-    message: "change-setting",
-    setting: `settings.damageMeter.header.${tabName}.enabled`,
-    value: settings.damageMeter.header[tabName].enabled,
-    source: "damageMeter",
-  });
+  settingsStore.change(
+    `settings.damageMeter.header.${tabName}.enabled`,
+    settings.damageMeter.header[tabName].enabled
+  );
 }
 
 const sessionDuration = ref(0);
@@ -322,12 +320,7 @@ function changeUploadLogs() {
   const newVal = !settingsStore.settings.uploads.uploadLogs;
   settingsStore.settings.uploads.uploadLogs = newVal;
 
-  window.messageApi.send("window-to-main", {
-    message: "change-setting",
-    setting: "settings.uploads.uploadLogs",
-    value: newVal,
-    source: "damageMeter",
-  });
+  settingsStore.change("settings.uploads.uploadLogs", newVal);
 }
 
 function requestSessionRestart() {
